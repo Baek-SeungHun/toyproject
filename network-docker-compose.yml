@@ -1,0 +1,22 @@
+services:
+  app1:
+    image: alpine
+    command: sleep 3600
+    networks:
+      - net-a
+
+  app2:
+    image: alpine
+    command: sleep 3600
+    networks:
+      - net-a
+
+  app3:
+    image: alpine
+    command: sleep 3600
+    networks:
+      - net-b
+
+networks:
+  net-a:
+  net-b:
