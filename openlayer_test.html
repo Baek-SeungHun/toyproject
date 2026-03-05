@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GeoServer WMS Test</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css">
+
+<style>
+html, body, #map {
+  width:100%;
+  height:100%;
+  margin:0;
+}
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+
+<script>
+
+// GeoServer WMS
+const geoserverLayer = new ol.layer.Tile({
+  source: new ol.source.TileWMS({
+    url: 'http://localhost:8080/geoserver/wms',
+    params: {
+      'LAYERS': 'khmt:stations',
+      'TILED': true
+    },
+    serverType: 'geoserver'
+  })
+});
+
+const map = new ol.Map({
+  target: 'map',
+  layers: [
+
+    // OSM 배경지도
+    new ol.layer.Tile({
+      source: new ol.source.OSM()
+    }),
+
+    // GeoServer 레이어
+    geoserverLayer
+
+  ],
+  view: new ol.View({
+    center: ol.proj.fromLonLat([126.5, 37.2]), // 충남쪽
+    zoom: 9
+  })
+});
+
+</script>
+
+</body>
+</html>
