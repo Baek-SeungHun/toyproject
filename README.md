@@ -14,7 +14,7 @@
 - **Framework**: Spring Boot 4.0.3
 - **Language**: Java 17
 - **Database**: PostgreSQL + PostGIS
-- **ORM**: MyBatis 4.0.1
+- **Mapper**: MyBatis 4.0.1
 - **GIS Server**: GeoServer
 
 ### Frontend
