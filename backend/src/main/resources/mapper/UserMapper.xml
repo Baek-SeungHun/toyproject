@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.toyproject.backend.domain.auth.mapper.UserMapper">
+
+    <select id="findByProviderAndProviderId" resultType="com.toyproject.backend.domain.auth.entity.User">
+        SELECT id, email, name, profile_image, provider, provider_id, created_at, updated_at
+          FROM users
+         WHERE provider = #{provider} AND provider_id = #{providerId}
+    </select>
+
+    <select id="findById" resultType="com.toyproject.backend.domain.auth.entity.User">
+        SELECT id, email, name, profile_image, provider, provider_id, created_at, updated_at
+          FROM users
+         WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (email, name, profile_image, provider, provider_id)
+        VALUES (#{email}, #{name}, #{profileImage}, #{provider}, #{providerId})
+    </insert>
+
+    <update id="update">
+        UPDATE users
+           SET name = #{name}, profile_image = #{profileImage}, updated_at = NOW()
+         WHERE id = #{id}
+    </update>
+
+</mapper>

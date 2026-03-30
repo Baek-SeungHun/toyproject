@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
 import type { Feature } from 'ol';
 import type { Geometry } from 'ol/geom';
+import { AuthProvider } from './contexts/AuthContext';
 import { MapProvider } from './contexts/MapContext';
 import { usePolygons } from './hooks/usePolygons';
 import { useRestaurants } from './hooks/useRestaurants';
 import MapView from './components/map/MapView';
 import Sidebar from './components/layout/Sidebar';
+import LoginButton from './components/auth/LoginButton';
 import PolygonForm from './components/polygon/PolygonForm';
 import PolygonList from './components/polygon/PolygonList';
 import RestaurantList from './components/restaurant/RestaurantList';
@@ -14,8 +16,11 @@ function AppContent() {
   const {
     polygons,
     currentFeature,
+    hiddenPolygonIds,
     addPolygon,
     removePolygon,
+    togglePolygonVisibility,
+    resetPolygons,
     setDrawnFeature,
     cancelDrawing,
   } = usePolygons();
@@ -53,15 +58,26 @@ function AppContent() {
     // TODO: 지도에서 해당 음식점으로 이동/마커 표시
   }, []);
 
+  const handleLogout = useCallback(() => {
+    resetPolygons();
+    clearRestaurants();
+  }, [resetPolygons, clearRestaurants]);
+
   return (
-    <div className="w-screen h-screen flex">
-      <Sidebar>
+    <div className="w-screen h-screen flex" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+      <Sidebar header={<LoginButton onLogout={handleLogout} />}>
         <div className="flex flex-col h-full">
           {currentFeature ? (
             <>
               <PolygonForm onSave={handleSave} onCancel={handleCancel} />
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">
+              <div
+                className="mt-6 pt-4"
+                style={{ borderTop: '1px solid var(--color-divider)' }}
+              >
+                <h2
+                  className="text-sm font-semibold mb-3"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   영역 내 음식점 ({restaurants.length})
                 </h2>
                 <RestaurantList
@@ -73,15 +89,28 @@ function AppContent() {
             </>
           ) : (
             <>
-              <div className="text-gray-500 text-sm">
-                <p>오른쪽 지도에서 "영역 그리기" 버튼을 클릭하여 새로운 영역을 그려보세요.</p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">저장된 영역</h2>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                오른쪽 지도에서 "영역 그리기" 버튼을 클릭하여 새로운 영역을 그려보세요.
+              </p>
+              <div
+                className="mt-6 pt-4"
+                style={{ borderTop: '1px solid var(--color-divider)' }}
+              >
+                <h2
+                  className="text-sm font-semibold mb-3"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  저장된 영역
+                </h2>
                 <PolygonList
                   polygons={polygons}
+                  hiddenPolygonIds={hiddenPolygonIds}
                   onSelect={handleSelectPolygon}
                   onDelete={(polygon) => removePolygon(polygon.id)}
+                  onToggleVisibility={togglePolygonVisibility}
                 />
               </div>
             </>
@@ -97,9 +126,11 @@ function AppContent() {
 
 function App() {
   return (
-    <MapProvider>
-      <AppContent />
-    </MapProvider>
+    <AuthProvider>
+      <MapProvider>
+        <AppContent />
+      </MapProvider>
+    </AuthProvider>
   );
 }
 

@@ -11,4 +11,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:9090',
+        changeOrigin: true,
+      },
+      '/oauth2': {
+        target: 'http://localhost:9090',
+        changeOrigin: true,
+      },
+      '/login': {
+        target: 'http://localhost:9090',
+        changeOrigin: true,
+      },
+    },
+  },
 })

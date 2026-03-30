@@ -14,7 +14,7 @@ interface MapViewProps {
 
 function MapView({ center, zoom, onPolygonDrawn }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   useMapInit(containerRef, { center, zoom });
   const { isDrawing, toggleDrawing } = useDrawing({ onDrawEnd: onPolygonDrawn });
 
@@ -36,11 +36,22 @@ function MapControls({ isDrawing, onToggleDrawing }: MapControlsProps) {
     <div className="absolute top-4 right-4 flex flex-col gap-2">
       <button
         onClick={onToggleDrawing}
-        className={`px-4 py-2 rounded-lg shadow-lg font-medium transition-colors ${
-          isDrawing
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-white text-gray-700 hover:bg-gray-100'
-        }`}
+        className="px-5 py-2.5 font-semibold text-sm text-white transition-all"
+        style={{
+          borderRadius: 'var(--radius-pill)',
+          boxShadow: 'var(--shadow-md)',
+          backgroundColor: isDrawing ? 'var(--color-error)' : 'var(--color-primary)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isDrawing) {
+            e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = isDrawing
+            ? 'var(--color-error)'
+            : 'var(--color-primary)';
+        }}
       >
         {isDrawing ? '취소' : '영역 그리기'}
       </button>

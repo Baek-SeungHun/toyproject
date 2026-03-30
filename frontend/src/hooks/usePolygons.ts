@@ -1,48 +1,92 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Feature } from 'ol';
 import type { Geometry } from 'ol/geom';
 import { useMapContext } from '@/contexts/MapContext';
-import { geometryToGeoJson } from '@/utils/geoUtils';
+import { geometryToGeoJson, geoJsonStringToFeature } from '@/utils/geoUtils';
+import { polygonsApi } from '@/api/polygons';
 import type { PolygonData, PolygonFormData } from '@/types/polygon';
 
 export function usePolygons() {
-  const { removeFeature } = useMapContext();
+  const { addFeature, removeFeature, clearFeatures } = useMapContext();
   const [polygons, setPolygons] = useState<PolygonData[]>([]);
   const [currentFeature, setCurrentFeature] = useState<Feature<Geometry> | null>(null);
+  const [hiddenPolygonIds, setHiddenPolygonIds] = useState<Set<string>>(new Set());
 
-  const addPolygon = useCallback((data: PolygonFormData, feature: Feature<Geometry>): PolygonData => {
+  const loadPolygons = useCallback(async () => {
+    try {
+      const serverPolygons = await polygonsApi.list();
+      clearFeatures();
+      const polygonDataList: PolygonData[] = serverPolygons.map((p) => {
+        const feature = geoJsonStringToFeature(JSON.stringify({ type: 'Feature', geometry: p.geoJson, properties: {} }));
+        addFeature(feature);
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          feature,
+          geoJson: p.geoJson,
+        };
+      });
+      setPolygons(polygonDataList);
+    } catch {
+      // 백엔드 미연결 시 빈 배열 유지
+    }
+  }, [addFeature, clearFeatures]);
+
+  useEffect(() => {
+    loadPolygons();
+  }, [loadPolygons]);
+
+  const addPolygon = useCallback(async (data: PolygonFormData, feature: Feature<Geometry>) => {
     const geoJson = geometryToGeoJson(feature);
-    
-    const newPolygon: PolygonData = {
-      id: crypto.randomUUID(),
-      name: data.name,
-      description: data.description,
-      feature,
-      geoJson: geoJson ?? undefined,
-    };
 
-    setPolygons((prev) => [...prev, newPolygon]);
-    setCurrentFeature(null);
+    try {
+      const response = await polygonsApi.create({
+        name: data.name,
+        description: data.description,
+        geoJson,
+      });
 
-    console.log('=== PostGIS 저장용 GeoJSON ===');
-    console.log('백엔드 전송 데이터:', {
-      name: data.name,
-      description: data.description,
-      geometry: geoJson,
-    });
+      const newPolygon: PolygonData = {
+        id: response.id,
+        name: response.name,
+        description: response.description,
+        feature,
+        geoJson: response.geoJson,
+      };
 
-    return newPolygon;
+      setPolygons((prev) => [...prev, newPolygon]);
+      setCurrentFeature(null);
+      return newPolygon;
+    } catch {
+      // 백엔드 미연결 시 로컬 UUID 폴백
+      const newPolygon: PolygonData = {
+        id: crypto.randomUUID(),
+        name: data.name,
+        description: data.description,
+        feature,
+        geoJson: geoJson ?? undefined,
+      };
+
+      setPolygons((prev) => [...prev, newPolygon]);
+      setCurrentFeature(null);
+      return newPolygon;
+    }
   }, []);
 
-  const removePolygon = useCallback((id: string) => {
-    setPolygons((prev) => {
-      const polygon = prev.find((p) => p.id === id);
-      if (polygon) {
-        removeFeature(polygon.feature);
-      }
-      return prev.filter((p) => p.id !== id);
-    });
-  }, [removeFeature]);
+  const removePolygon = useCallback(async (id: string) => {
+    try {
+      await polygonsApi.delete(id);
+    } catch {
+      // 백엔드 미연결 시에도 로컬에서 제거
+    }
+
+    const polygon = polygons.find((p) => p.id === id);
+    if (polygon) {
+      removeFeature(polygon.feature);
+    }
+    setPolygons((prev) => prev.filter((p) => p.id !== id));
+  }, [polygons, removeFeature]);
 
   const cancelDrawing = useCallback(() => {
     if (currentFeature) {
@@ -51,6 +95,36 @@ export function usePolygons() {
     }
   }, [currentFeature, removeFeature]);
 
+  const togglePolygonVisibility = useCallback((id: string) => {
+    const polygon = polygons.find((p) => p.id === id);
+    if (!polygon) return;
+
+    const isCurrentlyHidden = hiddenPolygonIds.has(id);
+
+    if (isCurrentlyHidden) {
+      addFeature(polygon.feature);
+    } else {
+      removeFeature(polygon.feature);
+    }
+
+    setHiddenPolygonIds((prev) => {
+      const next = new Set(prev);
+      if (isCurrentlyHidden) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, [polygons, hiddenPolygonIds, addFeature, removeFeature]);
+
+  const resetPolygons = useCallback(() => {
+    clearFeatures();
+    setPolygons([]);
+    setCurrentFeature(null);
+    setHiddenPolygonIds(new Set());
+  }, [clearFeatures]);
+
   const setDrawnFeature = useCallback((feature: Feature<Geometry> | null) => {
     setCurrentFeature(feature);
   }, []);
@@ -58,8 +132,11 @@ export function usePolygons() {
   return {
     polygons,
     currentFeature,
+    hiddenPolygonIds,
     addPolygon,
     removePolygon,
+    togglePolygonVisibility,
+    resetPolygons,
     setDrawnFeature,
     cancelDrawing,
   };
